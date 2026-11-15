@@ -21,6 +21,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final CategoryService categoryService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -34,6 +35,8 @@ public class AuthService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.password()));
         userRepository.save(user);
+
+        categoryService.createDefaultCategories(user.getId());
 
         return new AuthResponse(jwtUtil.generateToken(user), UserResponse.from(user));
     }
