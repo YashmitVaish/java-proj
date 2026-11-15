@@ -5,11 +5,14 @@ import java.util.List;
 import com.example.expensetracker.dto.CategoryRequest;
 import com.example.expensetracker.exception.ApiException;
 import com.example.expensetracker.model.Category;
+import com.example.expensetracker.model.Transaction;
 import com.example.expensetracker.model.TransactionType;
 import com.example.expensetracker.repository.CategoryRepository;
+import com.example.expensetracker.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class CategoryService {
     private static final List<String> DEFAULT_INCOME = List.of("Salary", "Freelance", "Gifts");
 
     private final CategoryRepository categoryRepository;
+    private final TransactionRepository transactionRepository;
 
     /** Called when a user registers. */
     public void createDefaultCategories(Long userId) {
@@ -71,11 +75,20 @@ public class CategoryService {
         return categoryRepository.save(category);
     }
 
+    @Transactional
     public void delete(Long userId, Long id) {
         Category category = getById(userId, id);
         if (category.isSystem()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Uncategorized can't be deleted");
         }
+
+        // move this category's transactions to "Uncategorized"
+        Category uncategorized = categoryRepository.findByUserIdAndTypeAndSystemTrue(userId, category.getType())
+                .orElseThrow();
+        for (Transaction transaction : transactionRepository.findByCategoryId(id)) {
+            transaction.setCategory(uncategorized);
+        }
+
         categoryRepository.delete(category);
     }
 }
