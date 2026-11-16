@@ -7,6 +7,7 @@ import com.example.expensetracker.exception.ApiException;
 import com.example.expensetracker.model.Category;
 import com.example.expensetracker.model.Transaction;
 import com.example.expensetracker.model.TransactionType;
+import com.example.expensetracker.repository.BudgetRepository;
 import com.example.expensetracker.repository.CategoryRepository;
 import com.example.expensetracker.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
+    private final BudgetRepository budgetRepository;
 
     /** Called when a user registers. */
     public void createDefaultCategories(Long userId) {
@@ -88,6 +90,9 @@ public class CategoryService {
         for (Transaction transaction : transactionRepository.findByCategoryId(id)) {
             transaction.setCategory(uncategorized);
         }
+
+        // budgets for this category go away with it
+        budgetRepository.deleteByCategoryId(id);
 
         categoryRepository.delete(category);
     }
