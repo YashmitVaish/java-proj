@@ -16,7 +16,17 @@ Tables get created automatically on first start.
 
 Generate a JWT secret: `openssl rand -base64 64 | tr -d '\n'`
 
-## for the frontend
+## frontend
+
+React + Vite app in [`frontend/`](frontend/README.md). Start the backend, then:
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:3000
+```
+
+## api notes for the frontend
 
 - base url: `http://localhost:8080/api`
 - CORS allows `http://localhost:3000` by default (change `CORS_ALLOWED_ORIGINS` in `.env`)
