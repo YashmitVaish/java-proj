@@ -15,6 +15,8 @@ java -jar target/expense-tracker.jar    # http://localhost:8080
 
 Or without building a jar: `./mvnw compile exec:java`.
 
+
+
 The database is a single file, `khata.db`, created with all its tables on first start.
 Delete it to start fresh. Generate a JWT secret: `openssl rand -base64 64 | tr -d '\n'`
 

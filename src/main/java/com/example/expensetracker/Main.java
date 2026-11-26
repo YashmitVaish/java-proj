@@ -100,7 +100,7 @@ public class Main {
         }));
     }
 
-    private static void setUpLogging() throws IOException {
+    static void setUpLogging() throws IOException {
         try (InputStream in = Main.class.getResourceAsStream("/logging.properties")) {
             if (in != null) {
                 LogManager.getLogManager().readConfiguration(in);
