@@ -1,99 +1,106 @@
 package com.example.expensetracker.service;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Logger;
 
+import com.example.expensetracker.dao.BudgetDao;
+import com.example.expensetracker.dao.CategoryDao;
+import com.example.expensetracker.dao.TransactionDao;
+import com.example.expensetracker.db.Database;
 import com.example.expensetracker.dto.CategoryRequest;
 import com.example.expensetracker.exception.ApiException;
 import com.example.expensetracker.model.Category;
-import com.example.expensetracker.model.Transaction;
 import com.example.expensetracker.model.TransactionType;
-import com.example.expensetracker.repository.BudgetRepository;
-import com.example.expensetracker.repository.CategoryRepository;
-import com.example.expensetracker.repository.TransactionRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@RequiredArgsConstructor
 public class CategoryService {
+
+    private static final Logger log = Logger.getLogger(CategoryService.class.getName());
 
     private static final List<String> DEFAULT_EXPENSE = List.of(
             "Food", "Rent", "Transport", "Shopping", "Bills & Utilities", "Health", "Entertainment");
     private static final List<String> DEFAULT_INCOME = List.of("Salary", "Freelance", "Gifts");
 
-    private final CategoryRepository categoryRepository;
-    private final TransactionRepository transactionRepository;
-    private final BudgetRepository budgetRepository;
+    private final Database database;
+    private final CategoryDao categoryDao;
+    private final TransactionDao transactionDao;
+    private final BudgetDao budgetDao;
 
-    /** Called when a user registers. */
-    public void createDefaultCategories(Long userId) {
+    public CategoryService(Database database, CategoryDao categoryDao, TransactionDao transactionDao,
+                           BudgetDao budgetDao) {
+        this.database = database;
+        this.categoryDao = categoryDao;
+        this.transactionDao = transactionDao;
+        this.budgetDao = budgetDao;
+    }
+
+    /** Called when a user registers, inside the registration transaction. */
+    public void createDefaultCategories(Connection conn, Long userId) throws SQLException {
         for (String name : DEFAULT_EXPENSE) {
-            categoryRepository.save(new Category(userId, name, TransactionType.EXPENSE, false));
+            categoryDao.insert(conn, new Category(null, userId, name, TransactionType.EXPENSE, false));
         }
         for (String name : DEFAULT_INCOME) {
-            categoryRepository.save(new Category(userId, name, TransactionType.INCOME, false));
+            categoryDao.insert(conn, new Category(null, userId, name, TransactionType.INCOME, false));
         }
-        categoryRepository.save(new Category(userId, Category.UNCATEGORIZED, TransactionType.EXPENSE, true));
-        categoryRepository.save(new Category(userId, Category.UNCATEGORIZED, TransactionType.INCOME, true));
+        categoryDao.insert(conn, new Category(null, userId, Category.UNCATEGORIZED, TransactionType.EXPENSE, true));
+        categoryDao.insert(conn, new Category(null, userId, Category.UNCATEGORIZED, TransactionType.INCOME, true));
     }
 
     public List<Category> getAll(Long userId, TransactionType type) {
-        if (type == null) {
-            return categoryRepository.findByUserIdOrderByNameAsc(userId);
-        }
-        return categoryRepository.findByUserIdAndTypeOrderByNameAsc(userId, type);
+        return categoryDao.findByUser(userId, type);
     }
 
     /** Finds a category that belongs to this user, otherwise 404. */
     public Category getById(Long userId, Long id) {
-        return categoryRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Category not found"));
+        return categoryDao.findByIdAndUser(id, userId)
+                .orElseThrow(() -> ApiException.notFound("Category not found"));
     }
 
     public Category create(Long userId, CategoryRequest request) {
         if (request.type() == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "type is required (INCOME or EXPENSE)");
+            throw ApiException.badRequest("type is required (INCOME or EXPENSE)");
         }
         String name = request.name().trim();
-        if (categoryRepository.existsByUserIdAndTypeAndNameIgnoreCase(userId, request.type(), name)) {
-            throw new ApiException(HttpStatus.CONFLICT, "Category already exists");
+        if (categoryDao.existsByName(userId, request.type(), name)) {
+            throw ApiException.conflict("Category already exists");
         }
-        return categoryRepository.save(new Category(userId, name, request.type(), false));
+        return categoryDao.insert(new Category(null, userId, name, request.type(), false));
     }
 
     public Category rename(Long userId, Long id, CategoryRequest request) {
         Category category = getById(userId, id);
         if (category.isSystem()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Uncategorized can't be renamed");
+            throw ApiException.badRequest("Uncategorized can't be renamed");
         }
         String name = request.name().trim();
         if (!name.equalsIgnoreCase(category.getName())
-                && categoryRepository.existsByUserIdAndTypeAndNameIgnoreCase(userId, category.getType(), name)) {
-            throw new ApiException(HttpStatus.CONFLICT, "Category already exists");
+                && categoryDao.existsByName(userId, category.getType(), name)) {
+            throw ApiException.conflict("Category already exists");
         }
+        categoryDao.updateName(id, name);
         category.setName(name);
-        return categoryRepository.save(category);
+        return category;
     }
 
-    @Transactional
+    /**
+     * Deletes a category in one transaction: its transactions move to "Uncategorized",
+     * its budgets are deleted, then the category itself. If any step fails, nothing changes.
+     */
     public void delete(Long userId, Long id) {
         Category category = getById(userId, id);
         if (category.isSystem()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Uncategorized can't be deleted");
+            throw ApiException.badRequest("Uncategorized can't be deleted");
         }
 
-        // move this category's transactions to "Uncategorized"
-        Category uncategorized = categoryRepository.findByUserIdAndTypeAndSystemTrue(userId, category.getType())
-                .orElseThrow();
-        for (Transaction transaction : transactionRepository.findByCategoryId(id)) {
-            transaction.setCategory(uncategorized);
-        }
-
-        // budgets for this category go away with it
-        budgetRepository.deleteByCategoryId(id);
-
-        categoryRepository.delete(category);
+        int moved = database.inTransaction(conn -> {
+            Category uncategorized = categoryDao.findSystemCategory(conn, userId, category.getType())
+                    .orElseThrow(() -> new IllegalStateException("User " + userId + " has no Uncategorized category"));
+            int count = transactionDao.moveToCategory(conn, id, uncategorized.getId());
+            budgetDao.deleteByCategory(conn, id);
+            categoryDao.delete(conn, id);
+            return count;
+        });
+        log.info("Deleted category " + id + ", moved " + moved + " transaction(s) to Uncategorized");
     }
 }

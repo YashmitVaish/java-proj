@@ -4,13 +4,23 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.example.expensetracker.model.TransactionType;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import com.example.expensetracker.validation.Validatable;
+import com.example.expensetracker.validation.Validator;
 
 public record TransactionRequest(
-        @NotNull TransactionType type,
-        @NotNull @Positive BigDecimal amount,
-        @NotNull LocalDate date,
-        @NotNull Long categoryId,
-        String description) {
+        TransactionType type,
+        BigDecimal amount,
+        LocalDate date,
+        Long categoryId,
+        String description) implements Validatable {
+
+    @Override
+    public void validate() {
+        new Validator()
+                .notNull("type", type)
+                .positive("amount", amount)
+                .notNull("date", date)
+                .notNull("categoryId", categoryId)
+                .check();
+    }
 }

@@ -1,11 +1,16 @@
 package com.example.expensetracker.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import com.example.expensetracker.validation.Validatable;
+import com.example.expensetracker.validation.Validator;
 
-public record RegisterRequest(
-        @NotBlank String name,
-        @NotBlank @Email String email,
-        @NotBlank @Size(min = 8, message = "must be at least 8 characters") String password) {
+public record RegisterRequest(String name, String email, String password) implements Validatable {
+
+    @Override
+    public void validate() {
+        new Validator()
+                .notBlank("name", name)
+                .notBlank("email", email).email("email", email)
+                .notBlank("password", password).minLength("password", password, 8)
+                .check();
+    }
 }

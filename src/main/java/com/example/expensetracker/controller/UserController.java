@@ -2,39 +2,28 @@ package com.example.expensetracker.controller;
 
 import com.example.expensetracker.dto.ChangePasswordRequest;
 import com.example.expensetracker.dto.UpdateUserRequest;
-import com.example.expensetracker.dto.UserResponse;
+import com.example.expensetracker.http.Response;
+import com.example.expensetracker.http.Router;
 import com.example.expensetracker.service.UserService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 
-@RestController
-@RequestMapping("/api/users/me")
-@RequiredArgsConstructor
+/** /api/users/me: the logged-in user's own profile. */
 public class UserController {
 
     private final UserService userService;
 
-    @GetMapping
-    public UserResponse getMe(@AuthenticationPrincipal Long userId) {
-        return userService.getMe(userId);
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
 
-    @PutMapping
-    public UserResponse updateMe(@AuthenticationPrincipal Long userId, @Valid @RequestBody UpdateUserRequest request) {
-        return userService.updateMe(userId, request);
-    }
+    public void register(Router router) {
+        router.get("/api/users/me", req -> Response.ok(userService.getMe(req.userId())));
 
-    @PutMapping("/password")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void changePassword(@AuthenticationPrincipal Long userId, @Valid @RequestBody ChangePasswordRequest request) {
-        userService.changePassword(userId, request);
+        router.put("/api/users/me", req ->
+                Response.ok(userService.updateMe(req.userId(), req.body(UpdateUserRequest.class))));
+
+        router.put("/api/users/me/password", req -> {
+            userService.changePassword(req.userId(), req.body(ChangePasswordRequest.class));
+            return Response.noContent();
+        });
     }
 }

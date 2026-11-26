@@ -2,39 +2,52 @@ package com.example.expensetracker.model;
 
 import java.math.BigDecimal;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-@Entity
-@Table(name = "budgets")
-@Getter
-@Setter
-@NoArgsConstructor
+/** A row in the budgets table: a spending limit for one month. */
 public class Budget {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false)
     private Long userId;
-
-    // null means an overall budget for all expenses in the month
-    @ManyToOne
-    private Category category;
-
-    // format "2026-11"
-    @Column(nullable = false)
-    private String month;
-
-    @Column(nullable = false, precision = 12, scale = 2)
+    private Category category;  // null means an overall budget for all expenses in the month
+    private String month;       // format "2026-11"
     private BigDecimal amount;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+    public String getMonth() {
+        return month;
+    }
+
+    public void setMonth(String month) {
+        this.month = month;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
 }

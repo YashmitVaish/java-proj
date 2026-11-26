@@ -1,11 +1,11 @@
 # Khata: expense tracker frontend
 
-React + Vite frontend for the Spring Boot API in the parent folder. It covers every endpoint in `PLAN.md`
+React + Vite frontend for the Java API in the parent folder. It covers every endpoint in `PLAN.md`
 section 4: auth, profile and password, categories, transactions, monthly budgets, reports and CSV export.
 
 ## Run it
 
-Needs Node 20 or newer. Start the backend first (`./mvnw spring-boot:run` in the parent folder), then:
+Needs Node 20 or newer. Start the backend first (`./mvnw package && java -jar target/expense-tracker.jar` in the parent folder), then:
 
 ```bash
 cd frontend

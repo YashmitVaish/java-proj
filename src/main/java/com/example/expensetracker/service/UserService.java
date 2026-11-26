@@ -1,22 +1,22 @@
 package com.example.expensetracker.service;
 
+import com.example.expensetracker.dao.UserDao;
 import com.example.expensetracker.dto.ChangePasswordRequest;
 import com.example.expensetracker.dto.UpdateUserRequest;
 import com.example.expensetracker.dto.UserResponse;
 import com.example.expensetracker.exception.ApiException;
 import com.example.expensetracker.model.User;
-import com.example.expensetracker.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
+import com.example.expensetracker.security.PasswordHasher;
 
-@Service
-@RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserDao userDao;
+    private final PasswordHasher passwordHasher;
+
+    public UserService(UserDao userDao, PasswordHasher passwordHasher) {
+        this.userDao = userDao;
+        this.passwordHasher = passwordHasher;
+    }
 
     public UserResponse getMe(Long userId) {
         return UserResponse.from(getUser(userId));
@@ -25,20 +25,20 @@ public class UserService {
     public UserResponse updateMe(Long userId, UpdateUserRequest request) {
         User user = getUser(userId);
         user.setName(request.name().trim());
-        return UserResponse.from(userRepository.save(user));
+        userDao.update(user);
+        return UserResponse.from(user);
     }
 
     public void changePassword(Long userId, ChangePasswordRequest request) {
         User user = getUser(userId);
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Current password is wrong");
+        if (!passwordHasher.matches(request.currentPassword(), user.getPassword())) {
+            throw ApiException.badRequest("Current password is wrong");
         }
-        user.setPassword(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
+        user.setPassword(passwordHasher.hash(request.newPassword()));
+        userDao.update(user);
     }
 
     private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        return userDao.findById(userId).orElseThrow(() -> ApiException.notFound("User not found"));
     }
 }

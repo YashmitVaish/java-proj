@@ -1,4 +1,4 @@
-// Thin wrapper around fetch for the Spring Boot API (see PLAN.md section 4 in the backend).
+// Thin wrapper around fetch for the backend API (see PLAN.md section 4 in the backend).
 
 const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/+$/, '');
 const TOKEN_KEY = 'khata.token';

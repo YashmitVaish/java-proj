@@ -1,52 +1,65 @@
 package com.example.expensetracker.service;
 
+import java.util.logging.Logger;
+
+import com.example.expensetracker.dao.UserDao;
+import com.example.expensetracker.db.Database;
 import com.example.expensetracker.dto.AuthResponse;
 import com.example.expensetracker.dto.LoginRequest;
 import com.example.expensetracker.dto.RegisterRequest;
 import com.example.expensetracker.dto.UserResponse;
 import com.example.expensetracker.exception.ApiException;
 import com.example.expensetracker.model.User;
-import com.example.expensetracker.repository.UserRepository;
 import com.example.expensetracker.security.JwtUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.example.expensetracker.security.PasswordHasher;
 
-@Service
-@RequiredArgsConstructor
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private static final Logger log = Logger.getLogger(AuthService.class.getName());
+
+    private final Database database;
+    private final UserDao userDao;
+    private final PasswordHasher passwordHasher;
     private final JwtUtil jwtUtil;
     private final CategoryService categoryService;
 
-    @Transactional
+    public AuthService(Database database, UserDao userDao, PasswordHasher passwordHasher, JwtUtil jwtUtil,
+                       CategoryService categoryService) {
+        this.database = database;
+        this.userDao = userDao;
+        this.passwordHasher = passwordHasher;
+        this.jwtUtil = jwtUtil;
+        this.categoryService = categoryService;
+    }
+
     public AuthResponse register(RegisterRequest request) {
         String email = request.email().trim().toLowerCase();
-        if (userRepository.existsByEmail(email)) {
-            throw new ApiException(HttpStatus.CONFLICT, "Email is already registered");
+        if (userDao.existsByEmail(email)) {
+            throw ApiException.conflict("Email is already registered");
         }
 
         User user = new User();
         user.setName(request.name().trim());
         user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(request.password()));
-        userRepository.save(user);
+        user.setPassword(passwordHasher.hash(request.password()));
 
-        categoryService.createDefaultCategories(user.getId());
+        // one transaction: if creating the categories fails, the user isn't saved either
+        database.inTransaction(conn -> {
+            userDao.insert(conn, user);
+            categoryService.createDefaultCategories(conn, user.getId());
+            return null;
+        });
 
+        log.info("New user registered: id " + user.getId());
         return new AuthResponse(jwtUtil.generateToken(user), UserResponse.from(user));
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email().trim().toLowerCase()).orElse(null);
+        User user = userDao.findByEmail(request.email().trim().toLowerCase()).orElse(null);
 
         // same message for wrong email and wrong password
-        if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        if (user == null || !passwordHasher.matches(request.password(), user.getPassword())) {
+            throw ApiException.unauthorized("Invalid email or password");
         }
         return new AuthResponse(jwtUtil.generateToken(user), UserResponse.from(user));
     }

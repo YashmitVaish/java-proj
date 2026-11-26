@@ -1,33 +1,22 @@
 package com.example.expensetracker.controller;
 
-import com.example.expensetracker.dto.AuthResponse;
 import com.example.expensetracker.dto.LoginRequest;
 import com.example.expensetracker.dto.RegisterRequest;
+import com.example.expensetracker.http.Response;
+import com.example.expensetracker.http.Router;
 import com.example.expensetracker.service.AuthService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 
-@RestController
-@RequestMapping("/api/auth")
-@RequiredArgsConstructor
+/** /api/auth: the only endpoints that work without a token. */
 public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 
-    @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public void register(Router router) {
+        router.post("/api/auth/register", req -> Response.created(authService.register(req.body(RegisterRequest.class))));
+        router.post("/api/auth/login", req -> Response.ok(authService.login(req.body(LoginRequest.class))));
     }
 }

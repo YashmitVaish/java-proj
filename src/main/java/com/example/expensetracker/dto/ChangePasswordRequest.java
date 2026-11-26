@@ -1,9 +1,15 @@
 package com.example.expensetracker.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import com.example.expensetracker.validation.Validatable;
+import com.example.expensetracker.validation.Validator;
 
-public record ChangePasswordRequest(
-        @NotBlank String currentPassword,
-        @NotBlank @Size(min = 8, message = "must be at least 8 characters") String newPassword) {
+public record ChangePasswordRequest(String currentPassword, String newPassword) implements Validatable {
+
+    @Override
+    public void validate() {
+        new Validator()
+                .notBlank("currentPassword", currentPassword)
+                .notBlank("newPassword", newPassword).minLength("newPassword", newPassword, 8)
+                .check();
+    }
 }

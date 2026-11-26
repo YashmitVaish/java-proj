@@ -1,48 +1,33 @@
 package com.example.expensetracker.controller;
 
-import java.time.LocalDate;
-import java.util.List;
-
-import com.example.expensetracker.dto.CategoryTotal;
-import com.example.expensetracker.dto.MonthlyTotal;
-import com.example.expensetracker.dto.SummaryResponse;
+import com.example.expensetracker.http.Response;
+import com.example.expensetracker.http.Router;
 import com.example.expensetracker.model.TransactionType;
 import com.example.expensetracker.service.ReportService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
-@RestController
-@RequestMapping("/api/reports")
-@RequiredArgsConstructor
+/** /api/reports */
 public class ReportController {
 
     private final ReportService reportService;
 
-    // GET /api/reports/summary?from=2026-11-01&to=2026-11-30
-    @GetMapping("/summary")
-    public SummaryResponse getSummary(@AuthenticationPrincipal Long userId,
-                                      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-                                      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return reportService.getSummary(userId, from, to);
+    public ReportController(ReportService reportService) {
+        this.reportService = reportService;
     }
 
-    // GET /api/reports/by-category?from=2026-11-01&to=2026-11-30&type=EXPENSE
-    @GetMapping("/by-category")
-    public List<CategoryTotal> getByCategory(@AuthenticationPrincipal Long userId,
-                                             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-                                             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-                                             @RequestParam(defaultValue = "EXPENSE") TransactionType type) {
-        return reportService.getByCategory(userId, from, to, type);
-    }
+    public void register(Router router) {
+        // GET /api/reports/summary?from=2026-11-01&to=2026-11-30
+        router.get("/api/reports/summary", req -> Response.ok(reportService.getSummary(
+                req.userId(), req.requiredQueryDate("from"), req.requiredQueryDate("to"))));
 
-    // GET /api/reports/monthly?year=2026
-    @GetMapping("/monthly")
-    public List<MonthlyTotal> getMonthly(@AuthenticationPrincipal Long userId, @RequestParam int year) {
-        return reportService.getMonthly(userId, year);
+        // GET /api/reports/by-category?from=2026-11-01&to=2026-11-30&type=EXPENSE  (type defaults to EXPENSE)
+        router.get("/api/reports/by-category", req -> {
+            TransactionType type = req.queryEnum("type", TransactionType.class);
+            return Response.ok(reportService.getByCategory(req.userId(), req.requiredQueryDate("from"),
+                    req.requiredQueryDate("to"), type == null ? TransactionType.EXPENSE : type));
+        });
+
+        // GET /api/reports/monthly?year=2026
+        router.get("/api/reports/monthly", req ->
+                Response.ok(reportService.getMonthly(req.userId(), req.requiredQueryInt("year"))));
     }
 }

@@ -8,17 +8,14 @@ import javax.crypto.SecretKey;
 import com.example.expensetracker.model.User;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
-@Component
+/** Creates and checks the login tokens (JWT) the frontend sends as "Authorization: Bearer ...". */
 public class JwtUtil {
 
     private final SecretKey key;
     private final long expirationMillis;
 
-    public JwtUtil(@Value("${app.jwt.secret}") String secret,
-                   @Value("${app.jwt.expiration-hours}") long expirationHours) {
+    public JwtUtil(String secret, long expirationHours) {
         if (secret.length() < 32) {
             throw new IllegalStateException("JWT_SECRET must be at least 32 characters");
         }
