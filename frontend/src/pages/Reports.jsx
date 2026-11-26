@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CategoryBars, MonthlyChart } from '../components/charts.jsx';
-import { LoadError, Loading, Segmented, Stepper, Swatch } from '../components/ui.jsx';
+import { LoadError, Loading, Refreshing, Segmented, Stepper, Swatch } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { EXPENSE_COLOR, INCOME_COLOR } from '../lib/colors.js';
 import { money, monthLabel, yearRange } from '../lib/format.js';
@@ -37,6 +37,8 @@ export default function Reports() {
 
       {main.error && <LoadError error={main.error} onRetry={main.reload} />}
       {!main.data && main.loading && <Loading />}
+
+      <Refreshing busy={main.loading && !!main.data}>
 
       {main.data && !hasData && <p className="empty-block">No transactions in {year}.</p>}
 
@@ -124,6 +126,7 @@ export default function Reports() {
           </section>
         </>
       )}
+      </Refreshing>
     </>
   );
 }

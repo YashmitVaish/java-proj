@@ -375,6 +375,17 @@ select {
   cursor: not-allowed;
 }
 
+.refreshing {
+  transition: opacity 0.15s;
+}
+
+/* short delay so quick reloads don't flicker */
+.refreshing.is-busy {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 0.2s 0.15s;
+}
+
 .stepper {
   display: inline-flex;
   align-items: center;

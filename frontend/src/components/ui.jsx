@@ -191,6 +191,15 @@ export function Loading({ label = 'Loading' }) {
   );
 }
 
+/** Dims content while it's being reloaded (e.g. after switching month), so stale numbers don't look current. */
+export function Refreshing({ busy, children }) {
+  return (
+    <div className={`refreshing ${busy ? 'is-busy' : ''}`} aria-busy={busy || undefined}>
+      {children}
+    </div>
+  );
+}
+
 export function Swatch({ color }) {
   return <span className="swatch" style={{ background: color }} aria-hidden="true" />;
 }

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { CategoryLegend, Meter, SpendingStrip } from '../components/charts.jsx';
 import { Amount, BudgetWords } from '../components/money.jsx';
 import { sortBudgets } from '../lib/budgets.js';
-import { LoadError, Loading, MonthStepper, Swatch } from '../components/ui.jsx';
+import { LoadError, Loading, MonthStepper, Refreshing, Swatch } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { NEUTRAL } from '../lib/colors.js';
 import { dateLabel, money, monthLabel, monthRange } from '../lib/format.js';
@@ -34,7 +34,11 @@ export default function Overview() {
 
       {error && <LoadError error={error} onRetry={reload} />}
       {!data && loading && <Loading />}
-      {data && <OverviewBody data={data} month={month} colorOf={colorOf} openTransaction={openTransaction} />}
+      {data && (
+        <Refreshing busy={loading}>
+          <OverviewBody data={data} month={month} colorOf={colorOf} openTransaction={openTransaction} />
+        </Refreshing>
+      )}
     </>
   );
 }

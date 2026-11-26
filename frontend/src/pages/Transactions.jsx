@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Amount } from '../components/money.jsx';
-import { ConfirmDialog, LoadError, Loading, MonthStepper, Segmented, Swatch } from '../components/ui.jsx';
+import { ConfirmDialog, LoadError, Loading, MonthStepper, Refreshing, Segmented, Swatch } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { dateLabel, money, monthLabel, monthRange, weekdayLabel } from '../lib/format.js';
 import { useLoad, useTitle } from '../lib/hooks.js';
@@ -100,6 +100,8 @@ export default function Transactions() {
       {error && <LoadError error={error} onRetry={reload} />}
       {!data && loading && <Loading />}
 
+      <Refreshing busy={loading && !!data}>
+
       {data && rows.length === 0 && (
         <div className="empty-block">
           <p>
@@ -184,6 +186,8 @@ export default function Transactions() {
           </table>
         </>
       )}
+
+      </Refreshing>
 
       {deleting && (
         <ConfirmDialog

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Meter } from '../components/charts.jsx';
 import { BudgetWords } from '../components/money.jsx';
 import { sortBudgets } from '../lib/budgets.js';
-import { ConfirmDialog, Field, FormError, LoadError, Loading, MonthStepper, Swatch } from '../components/ui.jsx';
+import { ConfirmDialog, Field, FormError, LoadError, Loading, MonthStepper, Refreshing, Swatch } from '../components/ui.jsx';
 import { api, ApiError } from '../lib/api.js';
 import { money, monthLabel, shiftMonth } from '../lib/format.js';
 import { useLoad, useTitle } from '../lib/hooks.js';
@@ -60,6 +60,8 @@ export default function Budgets() {
       {error && <LoadError error={error} onRetry={reload} />}
       {!data && loading && <Loading />}
 
+      <Refreshing busy={loading && !!data}>
+
       {data && (
         <>
           {data.status.length === 0 ? (
@@ -96,6 +98,8 @@ export default function Budgets() {
           <AddBudget month={month} categories={expenseCats} taken={taken} onAdded={refresh} />
         </>
       )}
+
+      </Refreshing>
 
       {deleting && (
         <ConfirmDialog
